@@ -492,3 +492,10 @@ WITH INIT;
 --WITH NORECOVERY
 
 /******************************************** END OF TEST *********************************/
+SELECT 
+    name AS ObjectName,
+    type_desc AS ObjectType,
+    modify_date
+FROM sys.objects
+WHERE CAST(modify_date AS DATE) = CAST(GETDATE() AS DATE)
+ORDER BY modify_date DESC;
