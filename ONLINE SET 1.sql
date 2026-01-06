@@ -275,7 +275,7 @@ GROUP BY d.DivisionID
 
 
 
-
+USE CapEx2
 
 -- Q12. List pending approvals with approver name
 
@@ -499,3 +499,24 @@ SELECT
 FROM sys.objects
 WHERE CAST(modify_date AS DATE) = CAST(GETDATE() AS DATE)
 ORDER BY modify_date DESC;
+
+GO
+-- Created by GitHub Copilot in SSMS - review carefully before executing
+/* 
+Calculates the available budget for a division by summing (TotalBudget - UtilizedAmount)
+across rows in dbo.tblBudget for the provided DivisionID.
+*/
+CREATE FUNCTION dbo.fn_GetAvailableBudget(@DivisionID INT)
+RETURNS DECIMAL(18,2)
+AS
+BEGIN
+    -- Compute summed available budget (TotalBudget - UtilizedAmount)
+    DECLARE @Available DECIMAL(18,2);
+
+    SELECT @Available = ISNULL(SUM(ISNULL(TotalBudget,0) - ISNULL(UtilizedAmount,0)),0)
+    FROM dbo.tblBudget
+    WHERE DivisionID = @DivisionID;
+
+    RETURN @Available;
+END;
+
