@@ -244,9 +244,8 @@ END
 GO
 EXEC uspBudgetUtlizedAmountUpdateCursor
 
-
-
-
+SELECT * FROM tblBudget
+SELECT * FROM tblCapExRequest
 
 /*****************************************************************************************
  SECTION 20 – GROUPING, RANKING & WINDOW FUNCTIONS
@@ -443,7 +442,7 @@ BEGIN
     END CATCH
 END
 
-EXEC uspCapExRequestCreate @Title = 'Title 6',@RequestedBy = 1,@Amount = 745000
+EXEC uspCapExRequestCreate @Title = 'Title 6',@RequestedBy = 3,@Amount = 745000
 
 select * from tblCapExRequest
 /*****************************************************************************************
@@ -511,17 +510,25 @@ EXEC uspCapExRequestSort 'Amount'
 
 -- Q43. Write a query to identify:
 -- CapEx requests where approval is pending more than 7 days
-
+SELECT * FROM tblCapExRequest
+WHERE ReqStatus = 'Pending' AND DATEDIFF(DAY,CreatedDate,GETDATE()) > 5
 
 
 -- Q44. Write a query to detect:
 -- Divisions exceeding 80% of their allocated budget
+
+SELECT * FROM tblBudget
+WHERE (TotalBudget * 0.8) < UtilizedAmount
 
 
 
 -- Q45. Write a query to find:
 -- Requests that were approved but do not have asset records
 
+SELECT *
+FROM tblCapExRequest
+WHERE ReqStatus = 'Approved'
+AND RequestID NOT IN (SELECT RequestID FROM tblAsset WHERE RequestID IS NOT NULL);
 
 
 /*****************************************************************************************
@@ -543,7 +550,30 @@ EXEC uspCapExRequestSort 'Amount'
 -- Automatically escalate CapEx requests
 -- If pending approval exceeds 5 days
 -- (Explain logic in comments)
+GO
+SELECT c.RequestID
+FROM tblCapExRequest c
+WHERE c.ReqStatus = 'Pending'
+AND EXISTS (
+    SELECT 1
+    FROM tblApprovalHistory a
+    WHERE a.RequestID = c.RequestID
+      AND a.ApprovalAction = 'PENDING'
+      AND c.CreatedDate > DATEADD(DAY, -5, GETDATE())
+);
 
 
+GO
 
+select * from tblCapExRequest
 /******************************************** END OF ADVANCED TEST *************************/
+GO
+
+
+DECLARE @thres DECIMAL(18,2) = 25000.00;
+DECLARE @sql NVARCHAR(MAX); 
+DECLARE @Params NVARCHAR(50) = N'@thres DECIMAL(18,2)';
+SET @sql = N'SELECT * FROM tblCapExRequest WHERE Amount > @thres'
+
+EXEC sp_executesql @sql,@Params,@thres = @thres
+

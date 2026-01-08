@@ -153,7 +153,6 @@ CREATE TABLE tblBudget(
 	BudgetID INT PRIMARY KEY IDENTITY(1,1),
 	DivisionId INT FOREIGN KEY REFERENCES tblDivision(DivisionID),
 	FiscalYear INT,
-	TotalBudget DECIMAL(18,2),
 	UtilizedAmount DECIMAL(18,2) DEFAULT 0)
 
 
@@ -451,8 +450,8 @@ END
 GO
 
 UPDATE tblCapExRequest
-SET ReqStatus = 'Approved'
-WHERE ReqStatus = 'Rejected'
+SET ReqStatus = 'Draft'
+WHERE ReqStatus = 'Pending'
 
 SELECT * FROM tblCapExRequest
 SELECT * FROM tblAuditLog

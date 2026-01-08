@@ -5,16 +5,25 @@
 -- Q48. Add a CHECK constraint to CapExRequest:
 -- Ensure Status can be only:
 -- ('Draft', 'Submitted', 'Approved', 'Rejected')
+ALTER TABLE tblCapExRequest
+ADD CONSTRAINT CK_CapEx_ReqStatus CHECK (ReqStatus IN ('Draft','Submitted','Approved','Rejected'))
 
 
 
 -- Q49. Add a UNIQUE constraint:
 -- Prevent duplicate CapEx titles per division
-
+ALTER TABLE tblCapExRequest
+ADD CONSTRAINT UQ_CapEx_tblCapExRequest_Title UNIQUE (Title)
 
 
 -- Q50. Add ON DELETE / ON UPDATE rules:
 -- Prevent deletion of Users if CapEx requests exist
+
+ALTER TABLE tblCapExRequest
+ADD CONSTRAINT FK_CapEx_tblCapExRequest_RequestedBy FOREIGN KEY (RequestedBy) REFERENCES tblUsers(UserID)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+
 
 
 
@@ -25,14 +34,38 @@
 -- Q51. Use a TEMP TABLE:
 -- Store all Approved CapEx requests
 -- Then query total amount per division
+CREATE TABLE #tblCapExApprovedRequest(
+	RequestID INT,
+	Title VARCHAR(200),
+	RequestedBy INT,
+	Amount DECIMAL(18,2),
+	ReqStatus VARCHAR(30),
+	CreatedDate DATETIME)
 
-
+INSERT INTO #tblCapExApprovedRequest
+SELECT RequestID,Title,RequestedBy,Amount,ReqStatus,CreatedDate
+FROM tblCapExRequest
+WHERE ReqStatus = 'Approved'
 
 -- Q52. Rewrite Q51 using a TABLE VARIABLE
 -- Explain difference in comments
+GO
+DECLARE @tblCapExApprovedRequest TABLE (
+	RequestID INT,
+	Title VARCHAR(200),
+	RequestedBy INT,
+	Amount DECIMAL(18,2),
+	ReqStatus VARCHAR(30),
+	CreatedDate DATETIME)
 
+INSERT INTO @tblCapExApprovedRequest
+SELECT RequestID,Title,RequestedBy,Amount,ReqStatus,CreatedDate
+FROM tblCapExRequest
+WHERE ReqStatus = 'Approved'
 
+SELECT * FROM @tblCapExApprovedRequest
 
+GO
 /*****************************************************************************************
  SECTION 30 – DATE & TIME LOGIC
 ******************************************************************************************/
@@ -41,7 +74,17 @@
 -- a) Get CapEx requests created in current month
 -- b) Get requests from previous fiscal year
 -- c) Calculate number of days request stayed in Pending status
+SELECT * FROM tblCapExRequest
+WHERE MONTH(CreatedDate) = MONTH(GETDATE())
 
+SELECT *	
+FROM tblCapExRequest
+WHERE YEAR(CreatedDate) = YEAR(GETDATE()) - 1
+
+SELECT *,
+	DATEDIFF(DAY,CreatedDate,GETDATE()) AS DaysRequestStayed 
+	FROM tblCapExRequest
+WHERE ReqStatus = 'Draft'
 
 
 /*****************************************************************************************
@@ -51,12 +94,14 @@
 -- Q54. Use ISNULL / COALESCE:
 -- Replace NULL UtilizedAmount with 0
 -- Show impact in budget calculations
-
+SELECT UserID,UserName,Email,DivisionID,COALESCE(CreatedDate,GETDATE()) as CreatedDate FROM tblUsers
 
 
 -- Q55. Identify:
 -- CapEx requests with missing approval records
-
+SELECT * FROM tblCapExRequest r
+WHERE NOT EXISTS(SELECT 1 FROM tblApprovalHistory a
+WHERE a.RequestID = r.RequestID)
 
 
 /*****************************************************************************************
@@ -67,7 +112,12 @@
 -- Source: New budget data
 -- Target: Budget table
 -- Perform INSERT or UPDATE accordingly
+MERGE #tblCapExApprovedRequest AS T
+USING tblCapExRequest AS S
+ON T.RequestID = S.RequestID
 
+WHEN MATCHED THEN
+UPDATE SET T.Amount = 25800;
 
 
 /*****************************************************************************************
@@ -77,10 +127,44 @@
 -- Q57. Store CapEx request metadata as JSON
 -- Extract values using JSON_VALUE()
 
+CREATE TABLE tblCapExRequestJson(
+    RequestID INT PRIMARY KEY IDENTITY(1,1),
+    Title VARCHAR(200),
+    Amount DECIMAL(18,2),
+    Metadata NVARCHAR(MAX)   -- JSON stored here
+);
+
+INSERT INTO tblCapExRequestJson (Title, Amount, Metadata)
+VALUES
+('Laptop Purchase', 50000,
+N'{
+   "divisionId": 2,
+   "requestedBy": 15,
+   "assetType": "IT",
+   "fiscalYear": 2024,
+   "priority": "High"
+}');
+SELECT RequestID,
+       Title,
+       Amount,
+
+       JSON_VALUE(Metadata,'$.divisionId')     AS DivisionId,
+       JSON_VALUE(Metadata,'$.requestedBy')    AS RequestedBy,
+       JSON_VALUE(Metadata,'$.assetType')      AS AssetType,
+       JSON_VALUE(Metadata,'$.fiscalYear')     AS FiscalYear,
+       JSON_VALUE(Metadata,'$.priority')       AS Priority
+FROM tblCapExRequestJson;
 
 
 -- Q58. Convert CapEx request data to XML format
 
+SELECT RequestID,
+       Title,
+       Amount,
+       ReqStatus,
+       CreatedDate
+FROM tblCapExRequest
+FOR XML PATH('Request'), ROOT('CapExRequests');
 
 
 /*****************************************************************************************
