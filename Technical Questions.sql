@@ -1,4 +1,9 @@
-﻿/*****************************************************************************************
+﻿/*
+Never rename a column directly in production without checking dependencies. 
+The safest method is to query via views or update dependent SPs after renaming.
+*/
+
+/*****************************************************************************************
  SECTION 1 – SQL SERVER ARCHITECTURE (SCENARIO BASED)
 ******************************************************************************************/
 
@@ -83,11 +88,24 @@ SELECT * FROM tblBudget
 -- A column storing phone numbers is defined as INT.
 -- What issues can occur?
 -- How would you fix it safely?
+/*
+Phone numbers should not be stored as INT because leading zeros are lost, large numbers overflow, and 
+formatting/country codes are not supported. 
+The safe fix is to store them as VARCHAR and migrate data using a new column with proper validation.
+*/
+
 /*****************************************************************************************
  SECTION 3 – TRANSACTIONS & ACID
 ******************************************************************************************/
 
 -- Q5. Explain ACID properties with real examples (comments).
+
+/*
+ATOMICITY
+CONSISTENCY
+ISOLATION
+DURABILITY
+*/
 
 
 
@@ -105,7 +123,28 @@ SELECT * FROM tblBudget
 
 -- Q7. List all isolation levels in SQL Server (comments).
 
+/*
+| Isolation Level              | SET Command                                                           |
+| ---------------------------- | --------------------------------------------------------------------- |
+| **READ UNCOMMITTED**         | `SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;`                   |
+| **READ COMMITTED** (Default) | `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;`                     |
+| **REPEATABLE READ**          | `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;`                    |
+| **SERIALIZABLE**             | `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;`                       |
+| **SNAPSHOT**                 | `SET TRANSACTION ISOLATION LEVEL SNAPSHOT;` *(Requires DB option ON)* |
+| ---------------------------------- | -------------------------------------------------------- |
+| **READ COMMITTED SNAPSHOT (RCSI)** | `ALTER DATABASE YourDB SET READ_COMMITTED_SNAPSHOT ON;`  |
+| **ALLOW SNAPSHOT ISOLATION**       | `ALTER DATABASE YourDB SET ALLOW_SNAPSHOT_ISOLATION ON;` |
 
+| Isolation Level  | Dirty Read  | Non-repeatable   | Phantom  |
+| ---------------- | ----------  | --------------   | -------  |
+| READ UNCOMMITTED | ✅          | ✅              | ✅       |
+| READ COMMITTED   | ❌          | ✅              | ✅       |
+| REPEATABLE READ  | ❌          | ❌              | ✅       |
+| SERIALIZABLE     | ❌          | ❌              | ❌       |
+| SNAPSHOT         | ❌          | ❌              | ❌       |
+| RCSI             | ❌          | ✅              | ✅       |
+
+*/
 
 -- Q8. Scenario:
 -- Dirty reads are happening in reports.
@@ -137,8 +176,10 @@ SELECT * FROM tblBudget
 -- A table has a clustered index on CreatedDate.
 -- Queries filter mostly by RequestID.
 -- What is wrong? How would you fix it?
-
-
+/*
+The clustered index is on CreatedDate, but queries mostly filter by RequestID, causing inefficient scans and lookups. 
+The fix is to make RequestID the clustered index or at least add a nonclustered index on RequestID based on access patterns.
+*/
 
 -- Q12. Explain:
 -- a) Included columns
@@ -155,7 +196,10 @@ SELECT * FROM tblBudget
 -- Same query runs fast sometimes and slow sometimes.
 -- Explain parameter sniffing (comments).
 
-
+SELECT *
+FROM tblCapExRequest
+WHERE RequestID = 100
+OPTION (RECOMPILE);
 
 -- Q14. Explain:
 -- a) Why SELECT * is bad
