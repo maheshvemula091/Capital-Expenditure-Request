@@ -176,12 +176,26 @@ FOR XML PATH('Request'), ROOT('CapExRequests');
 -- ERROR_MESSAGE()
 -- ERROR_NUMBER()
 
-
+BEGIN TRY
+    BEGIN TRAN
+    INSERT INTO tblCapExRequest(Title,RequestedBy,Amount,ReqStatus,CreatedDate)
+    VALUES
+    ('Title1',3,25000,'Draft',GETDATE())
+    COMMIT
+END TRY
+BEGIN CATCH
+    SELECT ERROR_MESSAGE() AS Err_Message,
+    ERROR_NUMBER() AS Err_Number
+    ROLLBACK
+END CATCH
 
 -- Q60. Explain in comments:
 -- Difference between THROW and RAISERROR
 
-
+/*
+THROW is the modern error-handling statement in SQL Server that 
+immediately stops execution and preserves complete error details, unlike RAISERROR.
+*/
 
 /*****************************************************************************************
  SECTION 35 – SECURITY & BEST PRACTICES
@@ -190,6 +204,25 @@ FOR XML PATH('Request'), ROOT('CapExRequests');
 -- Q61. Create a SQL ROLE:
 -- FinanceRole
 -- Grant SELECT on Budget and CapExRequest
+/*
+A SQL role is a permission group that simplifies security management by assigning permissions 
+once and applying them to multiple users.”
+*/
+
+SELECT 
+    SUSER_SNAME() AS LoginName,
+    USER_NAME()   AS DatabaseUser;
+
+CREATE ROLE CapExApprover
+
+GRANT SELECT 
+ON tblCapExRequest
+TO CapExApprover
+
+GRANT SELECT 
+ON tblBudget
+TO CapExApprover
+
 
 
 
@@ -197,7 +230,11 @@ FOR XML PATH('Request'), ROOT('CapExRequests');
 -- Why dynamic SQL can cause SQL Injection
 -- How sp_executesql prevents it
 
-
+/*
+“Dynamic SQL causes SQL injection when user input is concatenated into query strings.
+sp_executesql prevents this by parameterizing inputs, separating code from data, 
+and ensuring user values are treated as parameters instead of executable SQL.”
+*/
 
 /*****************************************************************************************
  SECTION 36 – ADVANCED QUERY CHALLENGES
@@ -205,17 +242,44 @@ FOR XML PATH('Request'), ROOT('CapExRequests');
 
 -- Q63. Write a query to:
 -- Find CapEx requests where Amount > Average Amount of that division
-
+SELECT * FROM
+tblCapExRequest
+WHERE Amount > (SELECT AVG(Amount) FROM tblCapExRequest c
+    JOIN tblUsers u ON c.RequestedBy = u.DivisionID
+    JOIN tblDivision d ON u.DivisionID = d.DivisionID)
 
 
 -- Q64. Identify:
 -- Divisions with zero CapEx requests in last 6 months
+SELECT * FROM tblDivision d
+WHERE NOT EXISTS (SELECT 1 FROM tblUsers u 
+    JOIN tblCapExRequest c ON c.RequestedBy = u.UserID
+    WHERE u.DivisionID = d.DivisionID) 
+
+
+SELECT DISTINCT d.DivisionID, d.DivisionName
+FROM tblDivision d
+LEFT JOIN tblUsers u
+       ON d.DivisionID = u.DivisionID
+LEFT JOIN tblCapExRequest c
+       ON u.UserID = c.RequestedBy
+WHERE c.RequestID IS NULL;
 
 
 
 -- Q65. Write a query to:
 -- Detect duplicate asset values across different requests
 
+SELECT * FROM
+    (SELECT 
+    COUNT(a.AssetID)OVER (PARTITION BY AssetID) AS Rn
+    FROM tblAsset a
+    JOIN tblCapExRequest c
+    ON a.AssetID = c.RequestID) T
+
+WHERE Rn >1
+
+GO
 
 
 /*****************************************************************************************

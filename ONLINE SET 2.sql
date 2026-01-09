@@ -314,7 +314,11 @@ ORDER BY Amount DESC
 -- Columns: Status (Draft, Approved, Rejected)
 -- Values: SUM(Amount)
 
-SELECT *
+SELECT DivisionName,
+    Title,
+    ISNULL([Approved],0)   AS Approved,
+    ISNULL([Rejected],0)   AS Rejected,
+    ISNULL([Draft],0)      AS Draft
 FROM
 (
    SELECT
@@ -537,9 +541,30 @@ AND RequestID NOT IN (SELECT RequestID FROM tblAsset WHERE RequestID IS NOT NULL
 
 -- Q46. Explain (in comments):
 -- a) When to use CTE vs Temp Table
--- b) Why cursors are discouraged
--- c) When dynamic SQL is necessary
 
+-- CTE (Common Table Expression):
+-- 1. Use CTEs for **readable, recursive, or one-time queries**.
+-- 2. Good for breaking complex queries into logical steps.
+-- 3. Exists only during the execution of a single query.
+-- 4. Cannot have indexes (except through query hints in some cases).
+
+-- Temp Table (#TempTable):
+-- 1. Use temp tables when **you need to store intermediate results** for multiple queries.
+-- 2. Can create indexes, constraints, and statistics.
+-- 3. Exists in TempDB, lasts for the session or until dropped.
+-- 4. Useful for large data processing or multiple-step ETL processes.
+
+-- b) Why cursors are discouraged
+-- 1. Cursors process rows **one at a time** (row-by-row / RBAR: "row by agonizing row").
+-- 2. This is much slower than set-based operations in SQL.
+-- 3. They consume **more memory** and can lock resources longer.
+-- 4. Only use cursors when **row-by-row logic is unavoidable** (rare).
+
+-- c) When dynamic SQL is necessary
+-- 1. When **table or column names are not known until runtime**.
+-- 2. When building **pivot queries or search filters dynamically**.
+-- 3. When implementing **optional WHERE clauses** based on input parameters.
+-- 4. Sometimes used for security bypassing or modularity, but must handle SQL Injection carefully.
 
 
 /*****************************************************************************************
