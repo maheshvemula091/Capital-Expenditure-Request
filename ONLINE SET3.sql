@@ -23,7 +23,8 @@ ALTER TABLE tblCapExRequest
 ADD CONSTRAINT FK_CapEx_tblCapExRequest_RequestedBy FOREIGN KEY (RequestedBy) REFERENCES tblUsers(UserID)
 ON DELETE NO ACTION
 
-
+exec sp_who2
+exec sp_who
 
 /*****************************************************************************************
  SECTION 29 – TEMP TABLES & TABLE VARIABLES
@@ -162,7 +163,7 @@ SELECT RequestID,
        ReqStatus,
        CreatedDate
 FROM tblCapExRequest
-FOR JSON PATH, ROOT('CapExRequests');
+FOR XML PATH('Request'), ROOT('CapExRequests');
 
 
 /*****************************************************************************************
