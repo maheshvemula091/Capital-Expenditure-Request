@@ -515,7 +515,7 @@ EXEC uspCapExRequestSort 'Amount'
 -- Q43. Write a query to identify:
 -- CapEx requests where approval is pending more than 7 days
 SELECT * FROM tblCapExRequest
-WHERE ReqStatus = 'Pending' AND DATEDIFF(DAY,CreatedDate,GETDATE()) > 5
+WHERE ReqStatus = 'DRAft' AND DATEDIFF(DAY,CreatedDate,GETDATE()) > 7
 
 
 -- Q44. Write a query to detect:

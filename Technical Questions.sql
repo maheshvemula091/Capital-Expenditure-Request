@@ -66,7 +66,7 @@ PRINT @b
 -- “DATETIME2 is more precise, has wider range and should be used in new development instead of DATETIME.”
 GO
 DECLARE @a DATETIME = GETDATE()
-DECLARE @b DATETIME2 = GETDATE()
+DECLARE @b DATETIME2(5) = GETDATE()
 
 PRINT @a
 PRINT @b
@@ -82,7 +82,7 @@ PRINT @i
 PRINT @f
 -- When should each be used?
 
-SELECT * FROM tblBudget
+
 
 -- Q4. Scenario:
 -- A column storing phone numbers is defined as INT.
@@ -170,7 +170,7 @@ DURABILITY
 -- b) Non-clustered index
 -- c) Heap table
 
-
+-- A heap table is a table without a clustered index where data is stored in no particular order and accessed using row identifiers.
 
 -- Q11. Scenario:
 -- A table has a clustered index on CreatedDate.
@@ -277,7 +277,62 @@ OPTION (RECOMPILE);
 -- Row-by-row update → Set-based update
 -- Explain approach (comments).
 
+-- Created by GitHub Copilot in SSMS - review carefully before executing
+/*
+Concept: Convert row-by-row (cursor or loop) updates to a set-based UPDATE.
+Example uses existing objects: dbo.tblDivision (DivisionID, IsActive) and dbo.tblBudget
+(TotalBudget). The goal: set dbo.tblDivision.IsActive = 0 when the division's total
+budget is 0, otherwise 1.
 
+Why set-based?
+ - Executes with set semantics in the engine; avoids per-row context switching.
+ - Fewer round-trips and less locking/skew from many small transactions.
+ - Makes use of aggregations, joins and indexing for better performance.
+*/
+
+-- BAD: Row-by-row approach (cursor) — shown for illustration only
+-- Comments: Performs a separate aggregation and update per division (slow at scale).
+DECLARE @DivID INT;
+DECLARE DivCursor CURSOR LOCAL FAST_FORWARD FOR
+SELECT DivisionID FROM dbo.tblDivision;
+
+OPEN DivCursor;
+FETCH NEXT FROM DivCursor INTO @DivID;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- compute total budget for this division and update IsActive per-row
+    DECLARE @SumTotal DECIMAL(18,2);
+    SELECT @SumTotal = ISNULL(SUM(TotalBudget),0)
+    FROM dbo.tblBudget
+    WHERE DivisionID = @DivID;
+
+    UPDATE dbo.tblDivision
+    SET IsActive = CASE WHEN @SumTotal = 0 THEN 0 ELSE 1 END
+    WHERE DivisionID = @DivID;
+
+    FETCH NEXT FROM DivCursor INTO @DivID;
+END;
+CLOSE DivCursor;
+DEALLOCATE DivCursor;
+
+
+-- GOOD: Set-based approach — single operation that updates all rows
+-- Comments: Aggregate once across dbo.tblBudget, then join to dbo.tblDivision and update
+UPDATE d
+SET IsActive = CASE WHEN ISNULL(b.SumTotal,0) = 0 THEN 0 ELSE 1 END
+FROM dbo.tblDivision AS d
+LEFT JOIN (
+    SELECT DivisionID, SUM(ISNULL(TotalBudget,0)) AS SumTotal
+    FROM dbo.tblBudget
+    GROUP BY DivisionID
+) AS b 
+ON d.DivisionID = b.DivisionID;
+
+-- Notes / Best practices
+-- 1) Ensure appropriate indexes exist on join and filter columns (e.g. dbo.tblBudget.DivisionID).
+-- 2) Test the update inside a transaction and check rowcounts before committing for large tables.
+-- 3) For very large updates consider batching with a WHERE clause on a keyed column to limit touchness.
+-- 4) Avoid functions on join predicates and WHERE columns (non-SARGable) for performance.
 
 /*****************************************************************************************
  SECTION 11 – BACKUP & RECOVER

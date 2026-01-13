@@ -22,8 +22,6 @@ ADD CONSTRAINT UQ_CapEx_tblCapExRequest_Title UNIQUE (Title)
 ALTER TABLE tblCapExRequest
 ADD CONSTRAINT FK_CapEx_tblCapExRequest_RequestedBy FOREIGN KEY (RequestedBy) REFERENCES tblUsers(UserID)
 ON DELETE NO ACTION
-ON UPDATE NO ACTION
-
 
 
 
@@ -61,7 +59,7 @@ DECLARE @tblCapExApprovedRequest TABLE (
 INSERT INTO @tblCapExApprovedRequest
 SELECT RequestID,Title,RequestedBy,Amount,ReqStatus,CreatedDate
 FROM tblCapExRequest
-WHERE ReqStatus = 'Approved'
+WHERE ReqStatus = 'Draft'
 
 SELECT * FROM @tblCapExApprovedRequest
 
@@ -164,7 +162,7 @@ SELECT RequestID,
        ReqStatus,
        CreatedDate
 FROM tblCapExRequest
-FOR XML PATH('Request'), ROOT('CapExRequests');
+FOR JSON PATH, ROOT('CapExRequests');
 
 
 /*****************************************************************************************
@@ -242,11 +240,20 @@ and ensuring user values are treated as parameters instead of executable SQL.”
 
 -- Q63. Write a query to:
 -- Find CapEx requests where Amount > Average Amount of that division
-SELECT * FROM
-tblCapExRequest
-WHERE Amount > (SELECT AVG(Amount) FROM tblCapExRequest c
-    JOIN tblUsers u ON c.RequestedBy = u.DivisionID
-    JOIN tblDivision d ON u.DivisionID = d.DivisionID)
+SELECT *
+FROM
+(
+    SELECT
+        r.RequestId,
+        r.Amount,
+        u.DivisionId,
+        AVG(r.Amount) OVER (PARTITION BY u.DivisionId) AS AvgAmount
+    FROM tblCapExRequest r
+    JOIN tblUsers u
+        ON r.RequestedBy = u.UserId
+) t
+WHERE Amount > AvgAmount;
+
 
 
 -- Q64. Identify:
@@ -321,3 +328,4 @@ GO
 
 
 /******************************************** END OF EXTENDED ADVANCED TEST ***************/
+

@@ -24,8 +24,10 @@ CREATE DATABASE CapEx2
 USE CapEx2
 GO
 
+select @@version
 
-
+-- Microsoft SQL Server 2022 (RTM-GDR) (KB5068407) - 16.0.1160.1 (X64)   Oct  3 2025 18:06:58  
+-- Copyright (C) 2022 Microsoft Corporation  Developer Edition (64-bit) on Windows 10 Home Single Language 10.0 <X64> (Build 26200: ) 
 /*****************************************************************************************
  SECTION 2 – ORGANIZATION & USERS MODULE
 ******************************************************************************************/
@@ -383,7 +385,11 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
+/*
+ANSI_NULLS ON enforces standard NULL comparison rules, and 
+QUOTED_IDENTIFIER ON allows identifiers to be enclosed in double quotes. 
+Both are required for modern SQL Server features.
+*/
 -- ==========================================
 -- AUTHOR: MAHESH VEMULA
 -- CREATED DATE: 02/01/2026
