@@ -65,8 +65,8 @@ JOIN tblApprovalHistory a ON r.RequestID = a.RequestID
 SELECT * FROM tblCapExRequest r
 LEFT JOIN tblApprovalHistory a ON r.RequestID = a.RequestID
 
-SELECT * FROM tblCapExRequest r
-RIGHT JOIN tblApprovalHistory a ON r.RequestID = a.RequestID
+    SELECT * FROM tblCapExRequest r
+    RIGHT JOIN tblApprovalHistory a ON r.RequestID = a.RequestID
 
 SELECT * FROM tblCapExRequest r
 FULL OUTER JOIN tblApprovalHistory a ON r.RequestID = a.RequestID
